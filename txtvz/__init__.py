@@ -7,4 +7,4 @@
     :copyright: (c) 2015 by
     :license: BSD, see LICENSE for more details.
 """
-import txtvz.tokenizer
+from txtvz.tokenizer import Grammar, TokenStream
