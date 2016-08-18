@@ -8,12 +8,47 @@ from nltk.tokenize import WordPunctTokenizer, RegexpTokenizer
 
 text = "Test"
 
-class segment:
+class Segment:
 
     tree = None
     #nltk.tree.Tree.
     def __init__(self, t):
         self.tree = t
+
+    def parseCV(self, node):
+        cv = '.'
+        for l in node.leaves():
+            if l[1] == '.':
+                cv = cv + '.'
+            elif l[1] == 'THRU':
+                cv = cv + '-'
+            else:
+                cv = cv + l[0]
+        return cv
+
+    def parseBook(self, node):
+        return ''.join(map(lambda x: x[1], node.leaves()))
+
+
+    def osis(self, t=None):
+
+        if not t:
+            t = self.tree
+
+        osis = ''
+
+        for n in t:
+            #print(repr(n))
+            if isinstance(n, nltk.tree.Tree):
+                if n.label() == 'B':
+                    osis = osis + self.parseBook(n)
+                elif n.label() == 'CV':
+                    osis = osis + self.parseCV(n)
+                else:
+                    pass
+                    return self.osis(n)
+        return osis
+
 
 class BCVParser:
     tree = None
@@ -44,11 +79,13 @@ class BCVParser:
         ]
 
         grammar = r"""
-
+            CONT:
+                {<THRU><CD>}
+                {<CH><CD>}
             CV:
-                {<CD><.><CD><THRU>*<CD>*}
-                {<CD><DOT><CD><THRU>*<CD>*}
-                {<CD><THRU><CD>}
+                {<CD><.><CD><CONT>*}
+                {<CD><DOT><CD><CONT>*}
+                {<CD><CONT>}
             B:
                 {<GN>}  # Genesis
                 {<EX>}  # Exodus
@@ -59,7 +96,7 @@ class BCVParser:
                 {<THREE>*<NN>*<JN>}# John or Epistle of John
                 {<MK>}
             BCV:
-                {<B><CV>} # Book followed by chap and verse
+                {<B><CV><CC>*} # Book followed by chap and verse
         """
         self.default_tagger = nltk.DefaultTagger('NN')
         self.regexp_tagger = nltk.RegexpTagger(patterns, backoff=self.default_tagger)
@@ -100,24 +137,26 @@ class BCVParser:
         self.postoks = self.regexp_tagger.tag(self.toks)
         t = self.chunker.parse(self.postoks)
 
-        return t
+        return Segment(t)
 
 if __name__ == '__main__':
 
     p = BCVParser()
     seg = p.parse('First John 1:1')
-    print(p.osis(seg))
+    #print(p.osis(seg))
     # seg = p.parse('John 1:5')
     # print(seg.printseg())
     # seg = p.parse('2ND John 1:1')
     # print(seg.printseg())
     seg = p.parse('2ND John 1:1-2')
-    print(p.osis(seg))
+    #print(p.osis(seg))
     #seg = p.parse('The Wisdom Solomon 1:1')
     # print(seg.printseg())
     seg = p.parse('Mark1through2')
-    print(p.osis(seg))
+    #print(p.osis(seg))
     seg = p.parse('Titus 1:1 thru 2')
-    print(p.osis(seg))
+    #print(p.osis(seg))
     # seg = p.parse('Exod 1:1 cf 3')
     # print(seg.printseg())
+    seg = p.parse('Titus 1:1-2 chapter 2')
+    print(seg.osis())
